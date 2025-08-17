@@ -100,7 +100,7 @@ class ReviewerAgent:
 
     def approve_and_post_to_notion(self, content_id: str) -> bool:
         """
-        Approves a content item, posts it to Notion, and purges it.
+        Approves a content item, posts to Notion, and purges it.
         """
         content_data = self.content_db_manager.get_content_by_id(content_id)
         if not content_data:

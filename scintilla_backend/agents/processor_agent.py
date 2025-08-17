@@ -167,9 +167,9 @@ class ProcessorAgent:
 
         # Minimum content length check
         min_content_length_map = {
-            "research": 1000, # Assuming roughly 3000 words, so we'll check for at least 1500 characters
-            "build": 300,     # for 'build' project type, around 1000 words
-            "article": 800   # for 'article' project type, around 2000 words
+            "research": 1500, # Assuming roughly 3000 words, so we'll check for at least 1500 characters
+            "build": 500,     # for 'build' project type, around 1000 words
+            "article": 1000   # for 'article' project type, around 2000 words
         }
 
         min_content_length = min_content_length_map.get(project_type, 500)
@@ -191,7 +191,7 @@ class ProcessorAgent:
                 if not isinstance(action, dict) or 'name' not in action or len(action.get('name', '')) < 20:
                     if settings.is_debug_mode:
                         print(f"[{datetime.now().isoformat()}] Validation failed for '{project_type}' type in idea {response.get('id')}: 'next_action' item is not a valid dictionary or name is too short.")
-                    return True
+                    return False
         
         # Next reading validation for research and article types
         if project_type in ["article", "research"]:
@@ -204,6 +204,7 @@ class ProcessorAgent:
                 if not isinstance(item, str) or len(item.strip()) < 20:
                     if settings.is_debug_mode:
                          print(f"[{datetime.now().isoformat()}] Validation failed for '{project_type}' type in idea {response.get('id')}: 'next_reading' item is not a valid string or is too short.")
-                    return True
+                    return False
 
         return True
+

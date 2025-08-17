@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from datetime import datetime
 import uuid
 
@@ -13,6 +13,8 @@ class IdeaCreate(IdeaBase):
 
 class Idea(BaseModel):
     id: str
+    idea_text: Optional[str] = ""
+    context_urls: Optional[str] = ""
     status: str
     timestamp: datetime
 
