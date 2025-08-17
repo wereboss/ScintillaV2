@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scintilla - Idea Management System</title>
+    <!-- Use Tailwind CSS from CDN for a sleek, responsive design -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom CSS for a clean look */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+        .content-card {
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+        }
+        .content-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .idea-item:hover {
+            background-color: #f9fafb;
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .badge-queue { background-color: #d1fae5; color: #065f46; }
+        .badge-processed { background-color: #cffafe; color: #0891b2; }
+        .badge-approved { background-color: #dbeafe; color: #1e40af; }
+        .badge-rejected { background-color: #fee2e2; color: #991b1b; }
+        .badge-error { background-color: #fef2f2; color: #dc2626; }
+        .priority-high { background-color: #fecaca; color: #b91c1c; }
+        .priority-medium { background-color: #fde68a; color: #92400e; }
+        .priority-low { background-color: #d1fae5; color: #065f46; }
+    </style>
+</head>
+<body class="min-h-screen p-4 sm:p-8">
+
+    <!-- Header and Navigation -->
+    <header class="text-center mb-8">
+        <h1 class="text-4xl font-bold text-gray-900 mb-2">Scintilla</h1>
+        <p class="text-lg text-gray-600">Your Idea Management & Content Generation System</p>
+    </header>
+
+    <nav class="flex justify-center space-x-4 mb-8">
+        <button id="nav-scratchpad" class="px-6 py-2 rounded-full text-lg font-medium text-white bg-blue-600 hover:bg-blue-700 transition duration-300 shadow-lg">Scratchpad</button>
+        <button id="nav-processor" class="px-6 py-2 rounded-full text-lg font-medium text-gray-700 bg-gray-200 hover:bg-gray-300 transition duration-300">Processor Status</button>
+        <button id="nav-reviewer" class="px-6 py-2 rounded-full text-lg font-medium text-gray-700 bg-gray-200 hover:bg-gray-300 transition duration-300">Reviewer</button>
+    </nav>
+    
+    <main class="container mx-auto max-w-4xl p-4 bg-white rounded-xl shadow-2xl content-card">
+
+        <!-- SCRATCHPAD VIEW -->
+        <div id="scratchpad-view" class="active-view">
+            <h2 class="text-3xl font-bold text-gray-900 mb-6">Idea Scratchpad</h2>
+            <form id="idea-form" class="space-y-4 mb-8">
+                <div class="space-y-2">
+                    <label for="idea_text" class="block text-sm font-medium text-gray-700">Idea & Intent</label>
+                    <textarea id="idea_text" name="idea_text" rows="4" placeholder="Jot down your idea, intent (e.g., 'research', 'build', 'article'), and any initial thoughts. The more detail, the better!" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3"></textarea>
+                </div>
+                <div class="space-y-2">
+                    <label for="context_urls" class="block text-sm font-medium text-gray-700">Context URLs (comma-separated)</label>
+                    <input type="text" id="context_urls" name="context_urls" placeholder="https://example.com/source, https://another-site.org/info" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3">
+                </div>
+                <div class="flex justify-end">
+                    <button type="submit" id="submit-button" class="px-6 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-300">Add Idea to Queue</button>
+                </div>
+            </form>
+            
+            <hr class="my-8">
+
+            <h3 class="text-2xl font-bold text-gray-900 mb-4">Idea Queue</h3>
+            <div id="ideas-list-container" class="space-y-4">
+                <!-- Ideas will be dynamically inserted here -->
+            </div>
+            <div id="ideas-list-empty" class="text-center text-gray-500 italic p-6" style="display:none;">
+                The idea queue is currently empty.
+            </div>
+            
+        </div>
+        
+        <!-- PROCESSOR STATUS VIEW -->
+        <div id="processor-view" style="display:none;">
+            <h2 class="text-3xl font-bold text-gray-900 mb-6">Processor Status Dashboard</h2>
+            <div id="processor-status-display" class="space-y-4 text-center p-8 bg-gray-50 rounded-lg">
+                <p id="processor-state" class="text-lg font-bold text-gray-800">Status: <span id="status-text" class="font-normal text-blue-600">Loading...</span></p>
+                <p class="text-sm text-gray-600">Pending Ideas: <span id="pending-count" class="font-bold">0</span></p>
+                <p class="text-sm text-gray-600">Next Run: <span id="next-run-text" class="font-bold">Unknown</span></p>
+            </div>
+        </div>
+
+        <!-- REVIEWER VIEW -->
+        <div id="reviewer-view" style="display:none;">
+            <h2 class="text-3xl font-bold text-gray-900 mb-6">Idea Reviewer</h2>
+            
+            <!-- List of pending review items -->
+            <div id="reviewer-list-container" class="space-y-4">
+                <!-- List items will be dynamically inserted here -->
+            </div>
+            <div id="reviewer-empty" class="text-center text-gray-500 italic p-6" style="display:none;">
+                No content available for review.
+            </div>
+
+            <!-- Single review item display -->
+            <div id="reviewer-content-display" class="space-y-6" style="display:none;">
+                <div class="flex justify-end mb-4">
+                    <button id="back-to-list-button" class="px-4 py-2 rounded-md text-sm font-medium text-gray-700 bg-gray-200 hover:bg-gray-300 transition duration-300">
+                        &larr; Back to List
+                    </button>
+                </div>
+                <!-- Processed content will be dynamically inserted here -->
+                <div id="review-card" class="content-card bg-gray-50 p-6 space-y-4">
+                    <h3 id="review-title" class="text-2xl font-bold text-gray-900"></h3>
+                    <p class="text-sm text-gray-500">
+                        <span id="review-type" class="font-bold uppercase"></span> -
+                        <span id="review-timestamp"></span>
+                    </p>
+                    <div id="review-tags" class="flex flex-wrap gap-2 mb-4"></div>
+                    <div id="review-content" class="prose max-w-none text-gray-800"></div>
+                    
+                    <div class="mt-6" id="next-actions-section">
+                        <h4 class="text-lg font-bold text-gray-900 mb-2">Next Actions</h4>
+                        <ul id="review-next-actions" class="list-disc list-inside space-y-2 text-gray-700"></ul>
+                    </div>
+
+                    <div class="mt-6" id="next-reading-section" style="display:none;">
+                        <h4 class="text-lg font-bold text-gray-900 mb-2">Next Reading</h4>
+                        <ul id="review-next-reading" class="list-disc list-inside space-y-2 text-gray-700"></ul>
+                    </div>
+                </div>
+
+                <div id="review-controls" class="flex space-x-4 justify-end mt-8">
+                    <button id="approve-button" class="px-6 py-3 rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition duration-300 shadow-md">Approve & Post to Notion</button>
+                    <button id="reject-button" class="px-6 py-3 rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition duration-300 shadow-md">Reject</button>
+                </div>
+
+                <!-- Rejection Form -->
+                <div id="rejection-form" class="mt-8 p-6 bg-red-50 rounded-lg shadow-inner content-card" style="display:none;">
+                    <h4 class="text-xl font-bold text-red-800 mb-4">Provide Corrections</h4>
+                    <div class="space-y-4">
+                        <textarea id="rejection-text" rows="3" placeholder="Explain what needs to be corrected in the generated content." class="block w-full rounded-md border-red-300 shadow-sm focus:border-red-500 focus:ring-red-500 p-3"></textarea>
+                        <input type="text" id="rejection-urls" placeholder="Additional context URLs (comma-separated)" class="block w-full rounded-md border-red-300 shadow-sm focus:border-red-500 focus:ring-red-500 p-3">
+                        <div class="flex justify-end space-x-2">
+                            <button id="cancel-rejection" class="px-4 py-2 rounded-md text-sm font-medium text-gray-700 bg-gray-200 hover:bg-gray-300 transition duration-300">Cancel</button>
+                            <button id="submit-rejection" class="px-4 py-2 rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition duration-300">Submit Corrections</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center text-gray-500 text-sm mt-8 p-4">
+        &copy; 2025 Scintilla. All Rights Reserved.
+    </footer>
+
+    <!-- JavaScript for dynamic functionality -->
+    <script>
+        // NOTE: If running on a different machine, replace 'localhost' with the Windows PC's IP address
+        const API_BASE_URL = 'http://192.168.0.29:8000';
+
+        // Get view elements
+        const views = {
+            scratchpad: document.getElementById('scratchpad-view'),
+            processor: document.getElementById('processor-view'),
+            reviewer: document.getElementById('reviewer-view')
+        };
+        const navButtons = {
+            scratchpad: document.getElementById('nav-scratchpad'),
+            processor: document.getElementById('nav-processor'),
+            reviewer: document.getElementById('nav-reviewer')
+        };
+        let currentView = 'scratchpad';
+
+        // Show a specific view and update navigation buttons
+        function showView(viewName) {
+            Object.keys(views).forEach(key => {
+                views[key].style.display = key === viewName ? 'block' : 'none';
+            });
+            Object.keys(navButtons).forEach(key => {
+                const button = navButtons[key];
+                if (key === viewName) {
+                    button.classList.add('bg-blue-600', 'text-white', 'hover:bg-blue-700', 'shadow-lg');
+                    button.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                } else {
+                    button.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                    button.classList.remove('bg-blue-600', 'text-white', 'hover:bg-blue-700', 'shadow-lg');
+                }
+            });
+            currentView = viewName;
+            
+            // Fetch data for the new view
+            switch (viewName) {
+                case 'scratchpad':
+                    fetchAndRenderIdeas();
+                    break;
+                case 'processor':
+                    fetchAndRenderProcessorStatus();
+                    break;
+                case 'reviewer':
+                    fetchAndRenderReviewerContent();
+                    break;
+            }
+        }
+
+        // Add event listeners to nav buttons
+        navButtons.scratchpad.addEventListener('click', () => showView('scratchpad'));
+        navButtons.processor.addEventListener('click', () => showView('processor'));
+        navButtons.reviewer.addEventListener('click', () => showView('reviewer'));
+
+        // --- SCRATCHPAD LOGIC ---
+        const ideaForm = document.getElementById('idea-form');
+        const ideaText = document.getElementById('idea_text');
+        const contextUrls = document.getElementById('context_urls');
+        const ideasListContainer = document.getElementById('ideas-list-container');
+        const ideasListEmpty = document.getElementById('ideas-list-empty');
+        const submitButton = document.getElementById('submit-button');
+
+        async function fetchAndRenderIdeas() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/scratchpad/all`);
+                const ideas = await response.json();
+                console.log('Scratchpad data received from API:', ideas); // DEBUG: Log the full response
+                renderIdeas(ideas);
+            } catch (error) {
+                console.error('Error fetching ideas:', error);
+                // Handle error gracefully on the UI
+                ideasListContainer.innerHTML = `<p class="text-center text-red-500 italic p-6">Failed to load ideas. Please check the backend server.</p>`;
+            }
+        }
+
+        function renderIdeas(ideas) {
+            ideasListContainer.innerHTML = '';
+            if (ideas.length === 0) {
+                ideasListEmpty.style.display = 'block';
+            } else {
+                ideasListEmpty.style.display = 'none';
+                ideas.forEach(idea => {
+                    const ideaItem = document.createElement('div');
+                    ideaItem.className = 'idea-item p-4 bg-gray-50 rounded-lg border border-gray-200 flex justify-between items-center transition duration-200 ease-in-out';
+                    
+                    const statusClass = `badge badge-${(idea.status || '').toLowerCase().replace(' ', '-')}`;
+                    
+                    ideaItem.innerHTML = `
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">${idea.idea_text || 'No idea text'}</p>
+                            <p class="text-xs text-gray-500 mt-1">Context: ${idea.context_urls || 'None'}</p>
+                            <p class="text-xs mt-1">ID: <span class="font-mono text-gray-500">${(idea.id || 'N/A').substring(0, 8)}...</span></p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="${statusClass}">${idea.status || 'N/A'}</span>
+                            <button data-id="${idea.id}" class="delete-button text-red-500 hover:text-red-700 transition duration-200">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 011 1v6a1 1 0 11-2 0V9a1 1 0 011-1z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        </div>
+                    `;
+                    ideasListContainer.appendChild(ideaItem);
+                });
+                
+                // Add event listeners for delete buttons
+                document.querySelectorAll('.delete-button').forEach(button => {
+                    button.addEventListener('click', async (e) => {
+                        const ideaId = e.currentTarget.dataset.id;
+                        await deleteIdea(ideaId);
+                    });
+                });
+            }
+        }
+        
+        async function deleteIdea(ideaId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/scratchpad/delete/${ideaId}`, {
+                    method: 'DELETE',
+                });
+                if (response.ok) {
+                    console.log(`Idea ${ideaId} deleted successfully.`);
+                    fetchAndRenderIdeas(); // Refresh the list
+                } else {
+                    console.error('Failed to delete idea:', await response.json());
+                }
+            } catch (error) {
+                console.error('Error deleting idea:', error);
+            }
+        }
+
+
+        ideaForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const ideaData = {
+                idea_text: ideaText.value,
+                context_urls: contextUrls.value
+            };
+            submitButton.disabled = true;
+            submitButton.textContent = 'Adding...';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/scratchpad/add`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(ideaData)
+                });
+                if (response.ok) {
+                    console.log('Idea added successfully!');
+                    ideaText.value = '';
+                    contextUrls.value = '';
+                    fetchAndRenderIdeas(); // Refresh the list
+                } else {
+                    console.error('Failed to add idea:', await response.json());
+                }
+            } catch (error) {
+                console.error('Error submitting idea:', error);
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Add Idea to Queue';
+            }
+        });
+
+
+        // --- PROCESSOR STATUS LOGIC ---
+        const statusText = document.getElementById('status-text');
+        const pendingCount = document.getElementById('pending-count');
+        const nextRunText = document.getElementById('next-run-text');
+
+        async function fetchAndRenderProcessorStatus() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/processor/status`);
+                const status = await response.json();
+                statusText.textContent = status.status;
+                pendingCount.textContent = status.pending_ideas_count;
+                nextRunText.textContent = status.next_run_in_minutes;
+            } catch (error) {
+                console.error('Error fetching processor status:', error);
+                statusText.textContent = 'Offline';
+                statusText.className = 'font-normal text-red-600';
+            }
+        }
+
+        // Refresh processor status every 10 seconds
+        setInterval(() => {
+            if (currentView === 'processor') {
+                fetchAndRenderProcessorStatus();
+            }
+        }, 10000);
+
+
+        // --- REVIEWER LOGIC ---
+        const reviewerContentDisplay = document.getElementById('reviewer-content-display');
+        const reviewerListContainer = document.getElementById('reviewer-list-container');
+        const reviewCard = document.getElementById('review-card');
+        const reviewerEmpty = document.getElementById('reviewer-empty');
+        const reviewTitle = document.getElementById('review-title');
+        const reviewType = document.getElementById('review-type');
+        const reviewTimestamp = document.getElementById('review-timestamp');
+        const reviewTags = document.getElementById('review-tags');
+        const reviewContent = document.getElementById('review-content');
+        const reviewNextActions = document.getElementById('review-next-actions');
+        const reviewNextReading = document.getElementById('review-next-reading');
+        const nextActionsSection = document.getElementById('next-actions-section');
+        const nextReadingSection = document.getElementById('next-reading-section');
+        const reviewControls = document.getElementById('review-controls');
+        const approveButton = document.getElementById('approve-button');
+const rejectButton = document.getElementById('reject-button');
+const rejectionForm = document.getElementById('rejection-form');
+const rejectionText = document.getElementById('rejection-text');
+const rejectionUrls = document.getElementById('rejection-urls');
+const submitRejectionButton = document.getElementById('submit-rejection');
+const cancelRejectionButton = document.getElementById('cancel-rejection');
+const backToListButton = document.getElementById('back-to-list-button');
+
+let currentReviewItem = null;
+
+async function fetchAndRenderReviewerContent() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/reviewer/all`);
+        const contentList = await response.json();
+        if (contentList.length > 0) {
+            reviewerEmpty.style.display = 'none';
+            reviewerListContainer.style.display = 'block';
+            reviewerContentDisplay.style.display = 'none';
+            renderReviewList(contentList);
+        } else {
+            reviewerEmpty.style.display = 'block';
+            reviewerListContainer.style.display = 'none';
+            reviewerContentDisplay.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Error fetching content for review:', error);
+        reviewerEmpty.textContent = 'Failed to load content for review.';
+        reviewerEmpty.style.display = 'block';
+        reviewerListContainer.style.display = 'none';
+        reviewerContentDisplay.style.display = 'none';
+    }
+}
+
+function renderReviewList(contentList) {
+    reviewerListContainer.innerHTML = '';
+    contentList.forEach(item => {
+        const listItem = document.createElement('div');
+        listItem.className = 'content-card p-4 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer flex justify-between items-center transition duration-200 ease-in-out';
+        listItem.dataset.id = item.id;
+        
+        const tagsHtml = item.category_tags.map(tag => `<span class="badge bg-gray-200 text-gray-700">${tag.trim()}</span>`).join('');
+
+        listItem.innerHTML = `
+            <div>
+                <p class="text-lg font-bold text-gray-900">${item.title}</p>
+                <p class="text-xs text-gray-500 mt-1">
+                    <span class="font-bold uppercase">${item.project_type}</span> -
+                    <span>${new Date(item.timestamp).toLocaleString()}</span>
+                </p>
+            </div>
+            <div class="flex flex-wrap gap-2 justify-end">
+                ${tagsHtml}
+            </div>
+        `;
+        listItem.addEventListener('click', () => displaySingleReviewItem(item));
+        reviewerListContainer.appendChild(listItem);
+    });
+}
+
+function displaySingleReviewItem(item) {
+    currentReviewItem = item;
+    reviewerListContainer.style.display = 'none';
+    reviewerContentDisplay.style.display = 'block';
+    rejectionForm.style.display = 'none';
+    reviewControls.style.display = 'flex';
+
+    reviewTitle.textContent = item.title;
+    reviewType.textContent = item.project_type;
+    reviewTimestamp.textContent = new Date(item.timestamp).toLocaleString();
+    reviewContent.innerHTML = `<p>${item.content.replace(/\n/g, '<br>')}</p>`;
+
+    // Render category tags
+    reviewTags.innerHTML = '';
+    item.category_tags.forEach(tag => {
+        const badge = document.createElement('span');
+        badge.className = 'badge bg-gray-200 text-gray-700';
+        badge.textContent = tag.trim();
+        reviewTags.appendChild(badge);
+    });
+
+    // Conditionally show/hide and render based on project type
+    const isArticleOrResearch = item.project_type === 'article' || item.project_type === 'research';
+    nextActionsSection.style.display = (item.project_type === 'build' || item.project_type === 'research') ? 'block' : 'none';
+    nextReadingSection.style.display = (item.project_type === 'article' || item.project_type === 'research') ? 'block' : 'none';
+
+    // Render 'Next Actions' for build and research types
+    reviewNextActions.innerHTML = '';
+    if ((item.project_type === 'build' || item.project_type === 'research') && Array.isArray(item.next_actions) && item.next_actions.length > 0) {
+        item.next_actions.forEach(action => {
+            const li = document.createElement('li');
+            li.className = 'flex items-center space-x-2';
+            let priorityBadgeHtml = '';
+            if (action.priority) {
+                const priorityClass = `priority-${action.priority.toLowerCase()}`;
+                priorityBadgeHtml = `<span class="badge ${priorityClass}">${action.priority}</span>`;
+            }
+            li.innerHTML = `${priorityBadgeHtml}<span>${action.name}</span>`;
+            reviewNextActions.appendChild(li);
+        });
+    } else if (item.project_type !== 'article') {
+        const li = document.createElement('li');
+        li.textContent = "No next actions provided.";
+        reviewNextActions.appendChild(li);
+    }
+    
+    // Render 'Next Reading' for article and research types
+    reviewNextReading.innerHTML = '';
+    const nextReadingItems = item.next_reading || [];
+    if ((item.project_type === 'article' || item.project_type === 'research') && Array.isArray(nextReadingItems) && nextReadingItems.length > 0) {
+        nextReadingItems.forEach(reading => {
+            const li = document.createElement('li');
+            li.textContent = reading;
+            reviewNextReading.appendChild(li);
+        });
+    } else if (item.project_type === 'article' || item.project_type === 'research') {
+        const li = document.createElement('li');
+        li.textContent = "No next reading suggestions provided.";
+        reviewNextReading.appendChild(li);
+    }
+}
+        
+        backToListButton.addEventListener('click', () => {
+            fetchAndRenderReviewerContent();
+        });
+        
+        approveButton.addEventListener('click', async () => {
+            if (currentReviewItem) {
+                const contentId = currentReviewItem.id;
+                try {
+                    const response = await fetch(`${API_BASE_URL}/reviewer/approve/${contentId}`, {
+                        method: 'POST'
+                    });
+                    if (response.ok) {
+                        console.log('Content approved successfully!');
+                        alert('Content approved and purged from local storage. Check Notion for the new entry.');
+                        fetchAndRenderReviewerContent(); // Load next item or show empty
+                    } else {
+                        console.error('Failed to approve content:', await response.json());
+                        alert('Failed to approve content.');
+                    }
+                } catch (error) {
+                    console.error('Error approving content:', error);
+                    alert('Error approving content.');
+                }
+            }
+        });
+
+        rejectButton.addEventListener('click', () => {
+            if (currentReviewItem) {
+                rejectionForm.style.display = 'block';
+                rejectionText.value = '';
+                rejectionUrls.value = '';
+                reviewControls.style.display = 'none';
+            }
+        });
+        
+        cancelRejectionButton.addEventListener('click', () => {
+            rejectionForm.style.display = 'none';
+            reviewControls.style.display = 'flex';
+        });
+
+        submitRejectionButton.addEventListener('click', async () => {
+            if (currentReviewItem) {
+                const contentId = currentReviewItem.id;
+                const payload = {
+                    correction_text: rejectionText.value,
+                    correction_urls: rejectionUrls.value
+                };
+                
+                try {
+                    const response = await fetch(`${API_BASE_URL}/reviewer/reject/${contentId}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.ok) {
+                        console.log('Content rejected and re-queued!');
+                        alert('Content rejected and re-queued for processing.');
+                        fetchAndRenderReviewerContent(); // Load next item or show empty
+                    } else {
+                        console.error('Failed to reject content:', await response.json());
+                        alert('Failed to reject content.');
+                    }
+                } catch (error) {
+                    console.error('Error rejecting content:', error);
+                    alert('Error rejecting content.');
+                }
+            }
+        });
+        
+        // Initial page load
+        document.addEventListener('DOMContentLoaded', () => {
+            showView('scratchpad');
+        });
+
+    </script>
+
+</body>
+</html>

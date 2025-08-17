@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+pydantic
+pydantic-settings
+uvicorn[standard]
+sqlalchemy
+requests
+ollama
