@@ -44,4 +44,3 @@ class ScratchpadAgent:
     def get_idea(self, idea_id: str) -> Optional[Dict]:
         """Retrieves a single idea by its ID."""
         return self.db_manager.get_idea(idea_id)
-

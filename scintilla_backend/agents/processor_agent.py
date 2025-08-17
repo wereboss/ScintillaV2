@@ -20,6 +20,8 @@ class ProcessorAgent:
         self.content_db_manager = DatabaseManager(settings.content_db_path, schema_name="content")
         self.prompts = self._load_prompts()
         self.ollama_client = ollama.Client(host=settings.ollama_base_url)
+        self.log_manager = DatabaseManager(settings.processor_log_db_path, schema_name="processor_log")
+        self.log_manager.create_tables()
 
     def _load_prompts(self) -> Dict:
         """Loads prompt templates from the prompts.json file."""
@@ -83,6 +85,8 @@ class ProcessorAgent:
             print(f"[{datetime.now().isoformat()}] Idea Text: {idea_text}")
             print(f"[{datetime.now().isoformat()}] Context URLs: {context_urls}")
 
+        self.log_manager.add_log_entry(idea_id, f"Processing idea: {idea_id}")
+
         # Determine project type (default to research if intent is unclear)
         project_type = "research"
         if "build" in idea_text.lower():
@@ -107,12 +111,14 @@ class ProcessorAgent:
         if not ollama_response:
             print(f"[{datetime.now().isoformat()}] Ollama returned an empty response for idea: {idea_id}")
             self.scratchpad_agent.update_status(idea_id, "error")
+            self.log_manager.add_log_entry(idea_id, "Ollama returned an empty response.")
             return None
 
         # Validate the Ollama response
         if not self._validate_ollama_response(ollama_response, project_type):
             print(f"[{datetime.now().isoformat()}] Ollama response for idea {idea_id} failed validation. Re-queuing.")
             self.scratchpad_agent.update_status(idea_id, "reprocess")
+            self.log_manager.add_log_entry(idea_id, "Response failed validation. Re-queuing.")
             return None
 
         # Extract data from the JSON response
@@ -143,6 +149,7 @@ class ProcessorAgent:
 
         # Update the status of the idea in the scratchpad
         self.scratchpad_agent.update_status(idea_id, "processed")
+        self.log_manager.add_log_entry(idea_id, "Successfully processed and awaiting review.")
         print(f"[{datetime.now().isoformat()}] Successfully processed idea: {idea_id}")
         return idea_id
 
@@ -207,4 +214,3 @@ class ProcessorAgent:
                     return False
 
         return True
-

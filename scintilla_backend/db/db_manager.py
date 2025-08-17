@@ -62,6 +62,17 @@ class DatabaseManager:
                     );
                     """
                 )
+            elif self.schema_name == "processor_log":
+                self.cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS processor_log (
+                        id TEXT PRIMARY KEY,
+                        idea_id TEXT,
+                        message TEXT NOT NULL,
+                        timestamp TEXT NOT NULL
+                    );
+                    """
+                )
             self.conn.commit()
             if settings.is_debug_mode:
                 print(f"[{datetime.now().isoformat()}] Tables created successfully in {self.db_path}")
@@ -265,5 +276,37 @@ class DatabaseManager:
         except sqlite3.Error as e:
             print(f"[{datetime.now().isoformat()}] An error occurred: {e}")
             return False
+        finally:
+            self._disconnect()
+
+    def add_log_entry(self, idea_id: str, message: str) -> str:
+        """Adds a log entry to the processor log database."""
+        self._connect()
+        log_id = str(uuid.uuid4())
+        timestamp = datetime.now().isoformat()
+        
+        try:
+            self.cursor.execute(
+                "INSERT INTO processor_log (id, idea_id, message, timestamp) VALUES (?, ?, ?, ?)",
+                (log_id, idea_id, message, timestamp),
+            )
+            self.conn.commit()
+            return log_id
+        except sqlite3.Error as e:
+            print(f"[{datetime.now().isoformat()}] An error occurred while logging: {e}")
+            return None
+        finally:
+            self._disconnect()
+
+    def get_all_logs(self) -> List[Dict]:
+        """Retrieves all log entries from the processor log database."""
+        self._connect()
+        try:
+            self.cursor.execute("SELECT * FROM processor_log ORDER BY timestamp DESC")
+            rows = self.cursor.fetchall()
+            return [dict(row) for row in rows]
+        except sqlite3.Error as e:
+            print(f"[{datetime.now().isoformat()}] An error occurred: {e}")
+            return []
         finally:
             self._disconnect()

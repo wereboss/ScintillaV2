@@ -50,12 +50,19 @@ class ReviewerAgent:
                     formatted_text += f"- {item}\n"
             return formatted_text.strip()
         
+        # Truncate content to Notion's 2000 character limit
+        content = content_data.get('content', '')
+        if len(content) > 2000:
+            if settings.is_debug_mode:
+                print(f"[{datetime.now().isoformat()}] Truncating content from {len(content)} to 2000 characters for Notion.")
+            content = content[:1997] + '...' # Add an ellipsis for truncation
+        
         properties = {
             "Title": {"title": to_rich_text(content_data.get('title', ''))},
             "Project Type": {"select": {"name": content_data.get('project_type', '').capitalize()}},
             "Status": {"status": {"name": "Approved"}}, # Corrected Status property
             "Category Tags": {"multi_select": to_multi_select(content_data.get('category_tags', []))},
-            "Content": {"rich_text": to_rich_text(content_data.get('content', ''))},
+            "Content": {"rich_text": to_rich_text(content)},
             "Source URLs": {"url": content_data.get('context_urls', '') if content_data.get('context_urls', '') else None},
             "Created Date": {"date": {"start": content_data.get('timestamp', '')}},
             "Approved Date": {"date": {"start": datetime.now().isoformat()}}
@@ -143,7 +150,7 @@ class ReviewerAgent:
 
         # Append corrections to original idea text and URLs
         new_idea_text = f"{original_idea['idea_text']}\n\n[Correction Notes]: {correction_text}"
-        new_context_urls = f"{original_idea['context_urls']},{correction_urls}" if original_idea['context_urls'] else correction_urls
+        new_context_urls = f"{original_idea.get('context_urls', '')},{correction_urls}" if original_idea.get('context_urls') else correction_urls
         
         if settings.is_debug_mode:
             print(f"[{datetime.now().isoformat()}] Re-queuing rejected idea with ID: {content_data['idea_id']}")

@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from typing import Optional
+import os
 
 class Settings(BaseSettings):
     """
@@ -9,10 +10,11 @@ class Settings(BaseSettings):
     # Database paths
     scratchpad_db_path: str = "scintilla_scratchpad.db"
     content_db_path: str = "scintilla_content.db"
+    processor_log_db_path: str = "scintilla_processor_log.db"
 
-    # Notion integration (optional for now)
-    notion_api_key: Optional[str] = None
-    notion_database_id: Optional[str] = None
+    # Notion integration
+    notion_api_key: Optional[str] = os.getenv("NOTION_API_KEY")
+    notion_database_id: Optional[str] = os.getenv("NOTION_DATABASE_ID")
 
     # Ollama model
     ollama_model_name: str = "llama3-groq-tool-use"

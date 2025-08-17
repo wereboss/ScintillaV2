@@ -97,6 +97,16 @@
                 <p class="text-sm text-gray-600">Pending Ideas: <span id="pending-count" class="font-bold">0</span></p>
                 <p class="text-sm text-gray-600">Next Run: <span id="next-run-text" class="font-bold">Unknown</span></p>
             </div>
+            
+            <hr class="my-8">
+
+            <h3 class="text-2xl font-bold text-gray-900 mb-4">Processor Logs</h3>
+            <div id="log-list-container" class="space-y-2 text-sm text-gray-700">
+                <!-- Logs will be dynamically inserted here -->
+            </div>
+            <div id="log-list-empty" class="text-center text-gray-500 italic p-6" style="display:none;">
+                No processor logs available.
+            </div>
         </div>
 
         <!-- REVIEWER VIEW -->
@@ -208,6 +218,7 @@
                     break;
                 case 'processor':
                     fetchAndRenderProcessorStatus();
+                    fetchAndRenderProcessorLogs();
                     break;
                 case 'reviewer':
                     fetchAndRenderReviewerContent();
@@ -334,6 +345,8 @@
         const statusText = document.getElementById('status-text');
         const pendingCount = document.getElementById('pending-count');
         const nextRunText = document.getElementById('next-run-text');
+        const logListContainer = document.getElementById('log-list-container');
+        const logListEmpty = document.getElementById('log-list-empty');
 
         async function fetchAndRenderProcessorStatus() {
             try {
@@ -349,6 +362,34 @@
             }
         }
 
+        async function fetchAndRenderProcessorLogs() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/processor/logs`);
+                const logs = await response.json();
+                renderProcessorLogs(logs);
+            } catch (error) {
+                console.error('Error fetching processor logs:', error);
+                logListContainer.innerHTML = `<p class="text-center text-red-500 italic p-6">Failed to load logs.</p>`;
+            }
+        }
+
+        function renderProcessorLogs(logs) {
+            logListContainer.innerHTML = '';
+            if (logs.length === 0) {
+                logListEmpty.style.display = 'block';
+            } else {
+                logListEmpty.style.display = 'none';
+                logs.forEach(log => {
+                    const logItem = document.createElement('div');
+                    logItem.className = 'p-2 border-b border-gray-200';
+                    logItem.innerHTML = `
+                        <p class="text-xs text-gray-500">${new Date(log.timestamp).toLocaleString()} - Idea ID: ${log.idea_id ? log.idea_id.substring(0, 8) + '...' : 'N/A'}</p>
+                        <p class="text-sm font-medium text-gray-900">${log.message}</p>
+                    `;
+                    logListContainer.appendChild(logItem);
+                });
+            }
+        }
         // Refresh processor status every 10 seconds
         setInterval(() => {
             if (currentView === 'processor') {

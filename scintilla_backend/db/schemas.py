@@ -42,6 +42,12 @@ class Content(ContentBase):
     class Config:
         from_attributes = True
 
+class ProcessorLog(BaseModel):
+    id: str
+    idea_id: str
+    message: str
+    timestamp: datetime
+
 # Schema for the rejection payload from the frontend
 class RejectionPayload(BaseModel):
     correction_text: str

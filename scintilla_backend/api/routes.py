@@ -1,11 +1,10 @@
 from fastapi import APIRouter, HTTPException
-from db.schemas import IdeaCreate, Idea, RejectionPayload, Content
+from db.schemas import IdeaCreate, Idea, RejectionPayload, Content, ProcessorLog
 from agents.scratchpad_agent import ScratchpadAgent
 from agents.processor_agent import ProcessorAgent
 from agents.reviewer_agent import ReviewerAgent
 from typing import List
 from datetime import datetime
-import json
 
 # Create an API router for all our endpoints
 api_router = APIRouter()
@@ -54,6 +53,15 @@ async def get_processor_status():
     Retrieves the current status of the Idea Processor dashboard.
     """
     return processor_agent.get_processor_status()
+
+
+@api_router.get("/processor/logs", response_model=List[ProcessorLog])
+async def get_processor_logs():
+    """
+    Retrieves the latest processor log entries.
+    """
+    logs = processor_agent.log_manager.get_all_logs()
+    return [ProcessorLog(**log) for log in logs]
 
 
 @api_router.get("/reviewer/all", response_model=List[Content])
