@@ -24,7 +24,8 @@ class Settings(BaseSettings):
 
     # Processor scheduling (placeholders for now)
     processing_batch_size: int = 5
-    processing_interval_minutes: int = 30
+    processing_interval_minutes: int = 3
+    processing_batch_max_rerun: int = 3
 
     # Debugging flag
     is_debug_mode: bool = True

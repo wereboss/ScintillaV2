@@ -2,3 +2,6 @@
 .db
 __pycache__/
 *.pyc
+scintilla_backend/scintilla_content.db
+scintilla_backend/scintilla_processor_log.db
+scintilla_backend/scintilla_scratchpad.db
